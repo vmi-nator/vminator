@@ -433,7 +433,7 @@ Et là seulement, arrêt des suppositions.`,
     }
 
     // ✅ UNE seule ligne SLA, uniquement en fin
-    parts.push(makeSlaLine());
+    if(maybe(0.45)) parts.push(makeSlaLine());
 
     let msg = parts
       .filter(Boolean)
