@@ -377,7 +377,6 @@ Et là seulement, arrêt des suppositions.`,
     const bridge = pickFresh(bridges, "lastBridges", 6);
 
     const parts = [];
-    parts.push(`🎤 VMInator — ${pick(["Réunion","Support","Migration","Incident","Cool","Analyse"])}\n`);
     parts.push(`${opener} ${maybe(0.55) ? pick(fillers) : ""} ${maybe(0.42) ? pick(signatures) : ""}`.replace(/\s+/g," ").trim());
 
     if(maybe(0.28)) parts.push(pickFresh(screenshare, "lastBridges", 6));
