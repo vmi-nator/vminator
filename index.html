@@ -72,6 +72,54 @@
     }
     .footer{color: var(--muted);font-size: 12px;text-align:center;opacity:.9;margin-top: 6px;}
     .hidden-controls{ display:none !important; }
+
+    /* --- Sujet --- */
+    .subject-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;}
+    .mode{
+      display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+      padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.03); color: var(--muted); font-size:13px; user-select:none;
+    }
+    .mode .lbl{font-weight:700; letter-spacing:.2px; color: var(--text); opacity:.9; margin-right:4px;}
+    .mode label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+    .mode input{transform: scale(1.05)}
+    .input{
+      appearance:none; border:1px solid var(--line); color:var(--text);
+      background: rgba(255,255,255,.03);
+      padding: 10px 12px; border-radius: 14px;
+      min-width: 260px;
+      outline:none;
+    }
+    .input::placeholder{color: rgba(170,182,229,.75)}
+    .hidden{ display:none !important; }
+	
+	/* Liste déroulante – contraste amélioré */
+	select {
+		background-color: #ffffff;
+		color: #000000;
+		border: 1px solid #666;
+		padding: 6px 8px;
+		border-radius: 4px;
+	}
+
+	/* Options dans la liste */
+	select option {
+		background-color: #ffffff;
+		color: #000000;
+	}
+
+	/* Focus clavier / souris */
+	select:focus {
+		outline: none;
+		border-color: #0078d4;
+		box-shadow: 0 0 0 2px rgba(0,120,212,0.3);
+	}
+
+	/* Désactivé (si tu en as) */
+	select:disabled {
+		background-color: #e0e0e0;
+		color: #666;
+}
   </style>
 </head>
 
@@ -103,6 +151,21 @@
         <label class="toggle hidden-controls"><input id="long" type="checkbox" checked />Plutôt long</label>
         <label class="toggle hidden-controls"><input id="boom" type="checkbox" checked />Patacaisse/Pétard+</label>
         <label class="toggle hidden-controls"><input id="typos" type="checkbox" checked />Micro-fautes</label>
+      </div>
+
+      <div class="subject-row">
+        <div class="mode" aria-label="Mode de choix du sujet">
+          <span class="lbl">Sujet :</span>
+          <label><input type="radio" name="subjectMode" value="list" /> Liste</label>
+          <label><input type="radio" name="subjectMode" value="random" checked /> Aléatoire</label>
+          <label><input type="radio" name="subjectMode" value="custom" /> Perso</label>
+        </div>
+
+        <select id="subjectSelect" class="input hidden" aria-label="Sélection du sujet">
+          <option value="" selected>Choisir un sujet…</option>
+        </select>
+
+        <input id="subjectCustom" class="input hidden" type="text" placeholder="Propose ton propre sujet…" aria-label="Sujet personnalisé" />
       </div>
 
       <div id="out" class="output" style="margin-top:12px">Clique sur “Générer”.</div>
@@ -143,6 +206,29 @@
     mem.unshift(t);
     memory.lastSubjects = mem.slice(0, 5);
     return t;
+  }
+
+  function rememberSubject(t){
+    if(!t) return;
+    const mem = memory.lastSubjects;
+    mem.unshift(t);
+    memory.lastSubjects = mem.slice(0, 5);
+  }
+
+  function getChosenSubject(){
+    const mode = document.querySelector('input[name="subjectMode"]:checked')?.value || "random";
+    if(mode === "custom"){
+      const txt = (document.getElementById("subjectCustom")?.value || "").trim();
+      if(txt){ rememberSubject(txt); return txt; }
+      // si vide, on retombe en aléatoire
+      return pickSubjectFresh();
+    }
+    if(mode === "list"){
+      const v = document.getElementById("subjectSelect")?.value || "";
+      if(v){ rememberSubject(v); return v; }
+      return pickSubjectFresh();
+    }
+    return pickSubjectFresh();
   }
 
   function weightedPick(items){
@@ -375,7 +461,7 @@ Et là seulement, arrêt des suppositions.`,
     const chosenPlan = (memory.lastPlans[0] === plan && maybe(0.6)) ? weightedPick(plans) : plan;
     memory.lastPlans.unshift(chosenPlan); memory.lastPlans = memory.lastPlans.slice(0,3);
 
-    const topic = pickSubjectFresh();
+    const topic = getChosenSubject();
     const topic2 = maybe(0.22) ? pickSubjectFresh() : null;
 
     const opener = pickFresh(openers, "lastOpeners", 6);
@@ -449,6 +535,41 @@ Et là seulement, arrêt des suppositions.`,
   const btnCopy = document.getElementById("btnCopy");
   const btnTeams = document.getElementById("btnTeams");
   const auto = document.getElementById("auto");
+  const subjectSelect = document.getElementById("subjectSelect");
+  const subjectCustom = document.getElementById("subjectCustom");
+
+  function updateSubjectInputsVisibility(){
+    const mode = document.querySelector('input[name="subjectMode"]:checked')?.value || "random";
+    subjectSelect.classList.toggle("hidden", mode !== "list");
+    subjectCustom.classList.toggle("hidden", mode !== "custom");
+  }
+
+  function initSubjectUI(){
+    // remplir la liste déroulante depuis la banque existante
+    subjectSelect.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choisir un sujet…";
+    placeholder.selected = true;
+    subjectSelect.appendChild(placeholder);
+    for(const s of subjects){
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      subjectSelect.appendChild(opt);
+    }
+
+    // écoute le mode (liste / aléatoire / perso)
+    document.querySelectorAll('input[name="subjectMode"]').forEach(r => {
+      r.addEventListener("change", ()=>{
+        updateSubjectInputsVisibility();
+        // petite UX: si on passe en perso, focus direct
+        if(r.value === "custom" && r.checked) subjectCustom.focus();
+      });
+    });
+
+    updateSubjectInputsVisibility();
+  }
 
   function setOutput(){ out.textContent = buildMessage(); }
   btnGen.addEventListener("click", setOutput);
@@ -485,6 +606,7 @@ Et là seulement, arrêt des suppositions.`,
     }
   });
 
+  initSubjectUI();
   setOutput();
 </script>
 </body>
